@@ -1,0 +1,166 @@
+<html>
+<head>
+<script src="vexflow-min.js"></script>
+<script src="jquery.min.js"></script>
+</head>
+<body>
+    <div>
+        调号：
+        <select id="toneton">
+            <option value="">C大调/a小调</option>
+        </select>&nbsp;&nbsp;
+        时值： 
+        <select id="duration">
+            <option value="1">全音符</option>
+            <option value="2">1/2 音符</option>
+            <option value="4" selected>1/4 音符</option>
+            <option value="8">1/8 全音符</option>
+            <option value="16">1/16 全音符</option>
+        </select>&nbsp;&nbsp;
+        
+        最低音：
+        <select id="lowest">
+        </select>&nbsp;&nbsp;
+
+        最高音：<select id="highest">
+        </select>&nbsp;&nbsp;
+        <button id="genBtn">生成</button>
+    </div>
+<canvas id="stave"></canvas>
+</body>
+<script>
+    var keys = [];
+    var scales = ['c', 'd', 'e', 'f', 'g', 'a', 'b'];
+    for(var i = 3; i< 7;i++){
+        for(var j = 0; j < 7; j++){
+            keys.push(scales[j] + '/' + i);
+        }
+    }
+    
+    var lowest = $("#lowest");
+    var highest = $("#highest")
+    $(keys).each(function(i, e){
+        lowest.append('<option value="'+e+'" '+('e/3' == e ? 'selected': '')+'>'+e+'</option>');
+        highest.append('<option value="'+e+'" '+('g/6' == e ? 'selected': '')+'>'+e+'</option>');
+    });
+
+    function randomRange(min, max){
+        return Math.floor(Math.random()*(max-min+1)+min);
+    }
+    
+    function getIndex(vals, val){
+        for(idx in vals){
+            if(vals[idx] == val) return idx;
+        }
+        return -1;
+    }
+
+    $('#lowest').on('change', function(){
+        var val = $(this).val();
+        var idx = getIndex(keys, val);
+        var highest = $("#highest");
+        var highVal = highest.val();
+        var highIdx = getIndex(keys, val);
+        highest.empty();
+        for(var i = idx; i < keys.length ; i++){
+            var current = keys[i];
+            highest.append('<option value="'+current+'" '+(highVal == current ? 'selected': '')+'>'+current+'</option>');
+        }
+    });
+
+    $("#genBtn").click(function(){
+        generate();
+    })
+   
+</script>
+<script>
+VF = Vex.Flow;
+    
+var WorkspaceInformation = {
+    canvas: document.getElementById("stave"),
+    canvasWidth: 1250,
+    canvasHeight: 600
+};
+var renderer = new VF.Renderer(
+    WorkspaceInformation.canvas,
+    VF.Renderer.Backends.CANVAS
+);
+renderer.resize(WorkspaceInformation.canvasWidth, WorkspaceInformation.canvasHeight);
+var context = renderer.getContext();
+context.setFont("Arial", 10, "").setBackgroundFillStyle("#eed");
+
+var w = 400;
+var h = 130;
+var staves = []
+var columns = 3;
+var rows = 4;
+function generateStaff(){
+    var dur = parseInt($("#duration").val());
+    var width = dur < 8 ? 200:400;
+    var cols = dur < 8 ? 6: 3;
+    staves = [];
+    for(var i = 0 ;i< rows;i++){
+        for(var j = 0 ; j< cols; j++){
+            var stave = new VF.Stave(10 + (j * width), 30 + (i*h), width);
+            if(j == 0){
+                stave.addClef("treble").addTimeSignature("4/4");
+            }
+            stave.setContext(context).draw();
+            staves.push(stave);
+        }
+    }
+}
+
+function generate(){
+    context.clear();
+    generateStaff();
+
+    var dur = $("#duration").val();
+    var lowest = $("#lowest").val();
+    var highest = $("#highest").val();
+    var startIndex = parseInt(getIndex(keys, lowest), 10);
+    var endIndex = parseInt(getIndex(keys, highest), 10);
+    var num = parseInt(dur);
+    for(var i = 0 ;i< staves.length; i++){
+        var notes = [];
+        var beams = [];
+        var ancherIndex;
+        for(var j = 0 ;j < num ; j++){
+            var min = startIndex;
+            var max = endIndex;
+            var index;
+            var direction;
+            if(num >= 8){
+                if(j % 4 == 0){
+                    index = randomRange(startIndex, endIndex);
+                    ancherIndex = index;
+                    direction = index > 15 ? -1: 1;
+                }else{
+                    min = ancherIndex - 5;
+                    min = min < startIndex ? startIndex: min;
+                    max = min + 10;
+                    max = max > endIndex ? endIndex: max;
+                    index = randomRange(min, max);
+                }
+            }else{
+                index = randomRange(startIndex, endIndex);
+                direction = index > 15 ? -1: 1;
+            }
+            
+            notes.push(new VF.StaveNote({ keys: [keys[index]], stem_direction: direction, duration: dur }))
+            if(num >= 8){
+                if((j+1)%4 == 0){
+                    beams.push(new VF.Beam([notes[j - 3], notes[j-2], notes[j-1], notes[j]]));
+                }
+            }
+        }
+        VF.Formatter.FormatAndDraw(context, staves[i], notes);
+        
+        for(var k = 0 ;k < beams.length; k++){
+            beams[k].setContext(context).draw();
+        }
+    }
+}
+generate();
+</script>
+</html>
