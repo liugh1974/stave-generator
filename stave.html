@@ -24,7 +24,7 @@
 
         最高音：<select id="highest">
         </select>&nbsp;&nbsp;
-        <button id="genBtn">生成</button>
+        <button id="refresh">刷新</button>
     </div>
 <canvas id="stave"></canvas>
 </body>
@@ -68,8 +68,8 @@
         }
     });
 
-    $("#genBtn").click(function(){
-        generate();
+    $("#refresh").click(function(){
+        refresh();
     })
    
 </script>
@@ -111,7 +111,7 @@ function generateStaff(){
     }
 }
 
-function generate(){
+function refresh(){
     context.clear();
     generateStaff();
 
@@ -161,6 +161,6 @@ function generate(){
         }
     }
 }
-generate();
+refresh();
 </script>
 </html>
